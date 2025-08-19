@@ -15,7 +15,7 @@ LINUX_GL_LIBS = -lGL
 
 CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 CXXFLAGS += -g -Wall -Wformat
-LIBS =
+LIBS = 
 
 
 ifeq ($(UNAME_S), Linux) #LINUX
@@ -40,9 +40,12 @@ endif
 
 ifeq ($(OS), Windows_NT)
 	ECHO_MESSAGE = "MinGW"
-	LIBS += -lglfw3 -lgdi32 -lopengl32 -limm32
+# 	LIBS += -lglfw3 -lgdi32 -lopengl32 -limm32
+	LIBS += -lraylib -lgdi32 -lwinmm
 
-	CXXFLAGS += `pkg-config --cflags glfw3`
+	CXXFLAGS += -I include
+# 	CXXFLAGS += `pkg-config --cflags glfw3`
+	CXXFLAGS += -L lib
 	CFLAGS = $(CXXFLAGS)
 endif
 
