@@ -1,4 +1,6 @@
 build/
+.vscode/
+.idea/
 first_person
 first_person.exe
 imgui.ini

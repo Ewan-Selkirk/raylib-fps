@@ -43,7 +43,7 @@ ifeq ($(OS), Windows_NT)
 # 	LIBS += -lglfw3 -lgdi32 -lopengl32 -limm32
 	LIBS += -lraylib -lgdi32 -lwinmm
 
-	CXXFLAGS += -I include
+	CXXFLAGS += -I include/RayLib -I include/GLFW
 # 	CXXFLAGS += `pkg-config --cflags glfw3`
 	CXXFLAGS += -L lib
 	CFLAGS = $(CXXFLAGS)

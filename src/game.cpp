@@ -4,16 +4,22 @@
 #define DEBUG_FUCKING_EVERYTHING
 #endif
 
+Mesh coin = { 0 };
+
 int main(void) {
     bool showImGui = false;
+    std::list<RayTrace> traces = {};
 
     InitWindow(screenWidth, screenHeight, "First Person Controller");
 
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+    // IMGUI_CHECKVERSION();
+    // ImGui::CreateContext();
 
     rlImGuiSetup(true);
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+
+    coin = GenMeshCylinder(1.f, 3.f, 8);
 
     Camera camera = { 0 };
     
@@ -39,8 +45,13 @@ int main(void) {
 
         if (IsKeyPressed(KEY_MINUS)) cameraFov -= 2.5f;
         if (IsKeyPressed(KEY_EQUAL)) cameraFov += 2.5f;
-        if (IsMouseButtonPressed(0)) DoLineTrace(&camera, &player, 50.f);
+        if (IsMouseButtonPressed(0)) {
+            if (traces.size() == 5) traces.pop_back();
+            traces.push_front((RayTrace){ GetScreenToWorldRay(screenCenter, camera), 5.f });
+        }
         if (IsKeyPressed(KEY_UP)) showImGui = !showImGui;
+
+        player.bIsSprinting = IsKeyDown(KEY_LEFT_SHIFT);
 
         char sideway = (IsKeyDown(KEY_D) - IsKeyDown(KEY_A));
         char forward = (IsKeyDown(KEY_W) - IsKeyDown(KEY_S));
@@ -76,6 +87,10 @@ int main(void) {
 
             BeginMode3D(camera);
                 DrawLevel();
+
+                for (RayTrace r : traces) {
+                    DrawRay(r.ray, RED);
+                }
             EndMode3D();
 
             // DrawCircleV((Vector2){ (screenWidth / 2) - (lean.x * 300.f), (screenHeight / 2) - lean.y }, 2.5f, WHITE);
@@ -91,6 +106,7 @@ int main(void) {
 
             DrawText(TextFormat("Velocity: (%06.3f)", Vector2Length((Vector2){ player.velocity.x, player.velocity.z})), 15, 35, 10, BLACK);
             DrawText(TextFormat("Camera FOV: (%01.1f)", cameraFov), 15, 50, 10, BLACK);
+            DrawText(TextFormat("Sprinting: (%s)", player.bIsSprinting ? "true": "false"), 15, 65, 10, BLACK);
 
             rlImGuiBegin();
 
@@ -138,7 +154,7 @@ void UpdateBody(Body* body, float rot, char side, char forward, bool bJumpPresse
 
     float speed = Vector3DotProduct(hvel, body->dir);
 
-    float maxSpeed = (bCrouchHeld ? crouchSpeed : walkSpeed);
+    float maxSpeed = (body->bIsSprinting ? sprintSpeed : bCrouchHeld && body->bIsGrounded ? crouchSpeed : walkSpeed);
     float accel = Clamp(maxSpeed - speed, 0.f, maxAccel * delta);
     hvel.x += body->dir.x * accel;
     hvel.z += body->dir.z * accel;
@@ -226,18 +242,10 @@ static void DrawLevel(void) {
     DrawSphere((Vector3){ 300.f, 300.f, 0.f }, 100.f, MAROON);
 
     for (int i = 0; i < 10; i++) {
-        DrawCircle3D((Vector3){ 0.f, 0.f, 5.f * i }, 1.f, (Vector3){ 0.f, 1.f, 0.f }, GetTime() * 100.f, VIOLET);
+        // DrawCircle3D((Vector3){ 0.f, 1.5f, 5.f * i }, 0.6f, (Vector3){ 0.f, 1.f, 0.f }, GetTime() * 100.f, YELLOW);
         // DrawMesh(GenMeshCylinder(1.f, 1.f, 8), LoadMaterialDefault(), (Matrix){ 0 });
+        DrawMesh(coin, LoadMaterialDefault(), (Matrix){  });
     }
-}
-
-void DoLineTrace(Camera *camera, Body *body, float length) {
-    BeginDrawing();
-        BeginMode3D(*camera);
-            // DrawLine3D(camera->position, camera->position + body->dir * length, RED);
-            DrawLine3D(camera->position, Vector3Add(camera->position, body->dir), RED);
-        EndMode3D();
-    EndDrawing();
 }
 
 void ShowDebugMenu(bool* show) {
@@ -246,7 +254,7 @@ void ShowDebugMenu(bool* show) {
     ImGui::SetNextWindowSizeConstraints(ImVec2(GetWindowScaleDPI().x * 400.f, GetWindowScaleDPI().x * 400.f), ImVec2(float(GetScreenWidth()), float(GetScreenHeight())));
 
     if (ImGui::Begin("Debug Menu", show, ImGuiWindowFlags_NoScrollbar)) {
-        Rectangle contentRect = { ImGui::GetWindowPos().x + ImGui::GetCursorScreenPos().x, ImGui::GetWindowPos().y + ImGui::GetCursorScreenPos().y, ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
+        // Rectangle contentRect = { ImGui::GetWindowPos().x + ImGui::GetCursorScreenPos().x, ImGui::GetWindowPos().y + ImGui::GetCursorScreenPos().y, ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
 
         if (ImGui::BeginChild("Variables", ImGui::GetContentRegionAvail())) {
             ImGui::SetCursorPosX(2);
@@ -260,6 +268,20 @@ void ShowDebugMenu(bool* show) {
             }
 
             ImGui::SliderFloat("Value", &cameraFov, 60.f, 120.f);
+
+            // Decrement Button
+            ImGui::SameLine();
+            if (ImGui::Button("-")) {
+                cameraFov -= 2.5f;
+                cameraFov = Clamp(cameraFov, 60.f, 120.f);
+            }
+
+            // Increment Button
+            ImGui::SameLine();
+            if (ImGui::Button("+")) {
+                cameraFov += 2.5f;
+                cameraFov = Clamp(cameraFov, 60.f, 120.f);
+            }
 
             ImGui::EndChild();
         }
