@@ -5,6 +5,7 @@
 #endif
 
 Mesh coin = { 0 };
+std::vector<Material*> Materials = {};
 
 int main(void) {
     bool showImGui = false;
@@ -19,7 +20,12 @@ int main(void) {
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
 
-    coin = GenMeshCylinder(1.f, 3.f, 8);
+    coin = GenMeshCylinder(1.f, 0.35f, 8);
+
+    // Add default material to vector of materials
+    Material default_mat = LoadMaterialDefault();
+    default_mat.maps[MATERIAL_MAP_DIFFUSE].color = YELLOW;
+    Materials.push_back(&default_mat);
 
     Camera camera = { 0 };
     
@@ -118,7 +124,7 @@ int main(void) {
     }
 
     rlImGuiShutdown();
-
+    for (Material* m : Materials) UnloadMaterial(*m);
     CloseWindow();
 
     return 0;
@@ -244,7 +250,16 @@ static void DrawLevel(void) {
     for (int i = 0; i < 10; i++) {
         // DrawCircle3D((Vector3){ 0.f, 1.5f, 5.f * i }, 0.6f, (Vector3){ 0.f, 1.f, 0.f }, GetTime() * 100.f, YELLOW);
         // DrawMesh(GenMeshCylinder(1.f, 1.f, 8), LoadMaterialDefault(), (Matrix){ 0 });
-        DrawMesh(coin, LoadMaterialDefault(), (Matrix){  });
+
+        // Matrix Math Lesson 1. Rotation
+        // Rotation = MatrixRotate(axis, angle) * transform
+        
+        Matrix transform = MatrixTranslate(0.f, 1.25f, 5.f * i);
+        Vector3 axis = Vector3Normalize((Vector3){ 90.f, 0.f, 0.f });
+        float angle = 90 * DEG2RAD;
+        Matrix rotation = MatrixRotate(axis, angle);
+
+        DrawMesh(coin, *Materials[0], MatrixMultiply(rotation, transform));
     }
 }
 
